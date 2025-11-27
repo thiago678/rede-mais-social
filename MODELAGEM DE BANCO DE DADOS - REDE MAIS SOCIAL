@@ -1,0 +1,128 @@
+-- ============================================
+-- MODELAGEM DE BANCO DE DADOS - REDE MAIS SOCIAL
+-- COM DADOS FICTÍCIOS
+-- ============================================
+
+-- =========================
+-- Tabela REPRESENTANTE_RS
+-- =========================
+CREATE TABLE REPRESENTANTE_RS (
+    id_representante      BIGINT PRIMARY KEY AUTO_INCREMENT,
+    nome                  VARCHAR(120) NOT NULL,
+    email                 VARCHAR(120) NOT NULL UNIQUE,
+    senha_hash            VARCHAR(255) NOT NULL,
+    cargo                 VARCHAR(80),
+    ativo                 BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+INSERT INTO REPRESENTANTE_RS (nome, email, senha_hash, cargo, ativo) VALUES
+('Mariana Ribeiro', 'mariana.rs@rms.org', 'hash123', 'Analista', TRUE),
+('João Pereira', 'joao.rs@rms.org', 'hash456', 'Coordenador', TRUE);
+
+-- =========================
+-- Tabela ONG
+-- =========================
+CREATE TABLE ONG (
+    id_ong          BIGINT PRIMARY KEY AUTO_INCREMENT,
+    nome            VARCHAR(150) NOT NULL,
+    cnpj            VARCHAR(18),
+    email           VARCHAR(120),
+    telefone        VARCHAR(20),
+    area_atuacao    VARCHAR(120),
+    site            VARCHAR(200),
+    cidade          VARCHAR(80),
+    estado          VARCHAR(2)
+);
+
+INSERT INTO ONG (nome, cnpj, email, telefone, area_atuacao, site, cidade, estado) VALUES
+('Instituto Esperança', '12.345.678/0001-99', 'contato@esperanca.org', '11988887777', 'Educação', 'www.esperanca.org', 'São Paulo', 'SP'),
+('Projeto Vida', '98.765.432/0001-22', 'contato@projetovida.org', '21999996666', 'Saúde', 'www.projetovida.org', 'Rio de Janeiro', 'RJ');
+
+-- =========================
+-- Tabela CAMPANHA
+-- =========================
+CREATE TABLE CAMPANHA (
+    id_campanha     BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id_ong          BIGINT NOT NULL,
+    titulo          VARCHAR(150) NOT NULL,
+    descricao       TEXT,
+    tipo            VARCHAR(40),
+    data_inicio     DATE,
+    data_fim        DATE,
+    CONSTRAINT fk_campanha_ong FOREIGN KEY (id_ong) REFERENCES ONG(id_ong)
+);
+
+INSERT INTO CAMPANHA (id_ong, titulo, descricao, tipo, data_inicio, data_fim) VALUES
+(1, 'Reforço Escolar 2025', 'Aulas de reforço para crianças em vulnerabilidade.', 'VOLUNTARIADO', '2025-02-01', '2025-12-20'),
+(2, 'Doação de Alimentos', 'Campanha para arrecadar cestas básicas.', 'DOACAO', '2025-01-15', '2025-03-15');
+
+-- =========================
+-- Tabela VOLUNTARIO
+-- =========================
+CREATE TABLE VOLUNTARIO (
+    id_voluntario   BIGINT PRIMARY KEY AUTO_INCREMENT,
+    nome            VARCHAR(120) NOT NULL,
+    email           VARCHAR(120) NOT NULL UNIQUE,
+    senha_hash      VARCHAR(255) NOT NULL,
+    telefone        VARCHAR(20),
+    habilidades     TEXT,
+    interesses      TEXT,
+    data_cadastro   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    ativo           BOOLEAN NOT NULL DEFAULT TRUE
+);
+
+INSERT INTO VOLUNTARIO (nome, email, senha_hash, telefone, habilidades, interesses) VALUES
+('Carlos Almeida', 'carlos.vol@teste.com', 'hash789', '11955554444', 'Reforço escolar, comunicação', 'Educação, inclusão'),
+('Julia Santos', 'julia.vol@teste.com', 'hash1011', '21944443333', 'Organização, campanhas', 'Saúde, doações');
+
+-- =========================
+-- Tabela AFILIACAO
+-- =========================
+CREATE TABLE AFILIACAO (
+    id_afiliacao            BIGINT PRIMARY KEY AUTO_INCREMENT,
+    nome_voluntario         VARCHAR(120) NOT NULL,
+    email_voluntario        VARCHAR(120) NOT NULL,
+    telefone_voluntario     VARCHAR(20),
+    habilidades             TEXT,
+    interesses              TEXT,
+    aceitou_termos          BOOLEAN NOT NULL,
+    data_solicitacao        DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    status                  VARCHAR(20) NOT NULL DEFAULT 'PENDENTE',
+    motivo_recusa           TEXT,
+    data_decisao            DATETIME,
+    id_representante        BIGINT,
+    id_voluntario           BIGINT,
+    email_validado          BOOLEAN NOT NULL DEFAULT FALSE,
+    token_validacao         VARCHAR(100),
+    data_validacao_email    DATETIME,
+    CONSTRAINT fk_afiliacao_representante FOREIGN KEY (id_representante) REFERENCES REPRESENTANTE_RS(id_representante),
+    CONSTRAINT fk_afiliacao_voluntario FOREIGN KEY (id_voluntario) REFERENCES VOLUNTARIO(id_voluntario)
+);
+
+INSERT INTO AFILIACAO (nome_voluntario, email_voluntario, telefone_voluntario, habilidades, interesses, aceitou_termos, status) VALUES
+('Pedro Lima', 'pedro.lima@teste.com', '11922223333', 'Organização, atendimento', 'Doações', TRUE, 'PENDENTE'),
+('Ana Costa', 'ana.costa@teste.com', '21933334444', 'Ensino, comunicação', 'Educação', TRUE, 'APROVADA');
+
+-- Simula afiliação aprovada vinculada ao voluntário 1
+UPDATE AFILIACAO SET id_voluntario = 1, id_representante = 1, data_decisao = '2025-01-20' WHERE email_voluntario = 'ana.costa@teste.com';
+
+-- =========================
+-- Tabela RECOMENDACAO
+-- =========================
+CREATE TABLE RECOMENDACAO (
+    id_recomendacao     BIGINT PRIMARY KEY AUTO_INCREMENT,
+    id_afiliacao        BIGINT NOT NULL,
+    id_voluntario       BIGINT NOT NULL,
+    id_ong              BIGINT NOT NULL,
+    id_campanha         BIGINT,
+    data_recomendacao   DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    observacoes         TEXT,
+    CONSTRAINT fk_recom_afiliacao FOREIGN KEY (id_afiliacao) REFERENCES AFILIACAO(id_afiliacao),
+    CONSTRAINT fk_recom_voluntario FOREIGN KEY (id_voluntario) REFERENCES VOLUNTARIO(id_voluntario),
+    CONSTRAINT fk_recom_ong FOREIGN KEY (id_ong) REFERENCES ONG(id_ong),
+    CONSTRAINT fk_recom_campanha FOREIGN KEY (id_campanha) REFERENCES CAMPANHA(id_campanha)
+);
+
+INSERT INTO RECOMENDACAO (id_afiliacao, id_voluntario, id_ong, id_campanha, observacoes) VALUES
+(2, 1, 1, 1, 'Perfil alinhado ao reforço escolar'),
+(2, 1, 2, NULL, 'Também pode ajudar na campanha de doações');
